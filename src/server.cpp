@@ -6,7 +6,7 @@
 #include <sys/un.h>
 
 namespace ipc {
-    
+
 namespace socket {
 
 server::server(fd_owner fd) : fd_(std::move(fd)) {}

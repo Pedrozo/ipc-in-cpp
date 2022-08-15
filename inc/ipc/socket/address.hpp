@@ -6,7 +6,7 @@
 #include <sys/un.h>
 
 namespace ipc {
-    
+
 namespace socket {
 
 class address {

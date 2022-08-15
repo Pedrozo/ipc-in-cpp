@@ -34,7 +34,7 @@ struct connection::impl {
     std::istream in_stream;
     std::ostream out_stream;
 };
-    
+
 connection::connection(fd_owner fd) : pimpl_(std::make_unique<connection::impl>(std::move(fd))) {}
 
 connection::~connection() = default;
@@ -78,7 +78,7 @@ connection connect(type tp, const address& addr) {
 }
 
 // connection connect(const std::string& address) {
-    
+
 // }
 
 } // namespace socket

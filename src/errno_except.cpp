@@ -13,5 +13,5 @@ int errno_except::error_number() const noexcept {
 const char *errno_except::what() const noexcept {
     return strerror(error_number_);
 }
-    
+
 } // namespace ipc

@@ -4,7 +4,7 @@
 #include <unistd.h>
 
 namespace ipc {
-    
+
 fd_device::fd_device(int fd) : fd_(fd) {}
 
 std::streamsize fd_device::read(char_type *dest, std::streamsize size) {
