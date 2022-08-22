@@ -6,10 +6,6 @@
 #include <unistd.h>
 #include <stdexcept>
 
-#include <boost/iostreams/stream.hpp>
-#include <boost/iostreams/stream_buffer.hpp>
-#include <boost/iostreams/device/file.hpp>
-
 namespace ipc {
 
 namespace socket {
