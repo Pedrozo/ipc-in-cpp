@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <unistd.h>
+#include <errno.h>
 #include "ipc/fd_owner.hpp"
 #include "ipc/errno_except.hpp"
 

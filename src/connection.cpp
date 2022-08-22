@@ -1,9 +1,9 @@
 #include "ipc/socket/connection.hpp"
 #include "ipc/errno_except.hpp"
-#include "ipc/fd_device.hpp"
 
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <unistd.h>
 #include <stdexcept>
 
 #include <boost/iostreams/stream.hpp>
@@ -14,45 +14,28 @@ namespace ipc {
 
 namespace socket {
 
-struct connection::impl {
-    explicit impl(fd_owner f)
-        : fd(std::move(f)), stream_buffer(fd_device(fd)),
-          in_stream(&stream_buffer), out_stream(&stream_buffer) {}
-
-    ~impl() = default;
-
-    impl(const impl&) = delete;
-
-    impl(impl&&) = delete;
-
-    impl& operator=(const impl&) = delete;
-
-    impl& operator=(impl&&) = delete;
-
-    fd_owner fd;
-    boost::iostreams::stream_buffer<fd_device> stream_buffer;
-    std::istream in_stream;
-    std::ostream out_stream;
-};
-
-connection::connection(fd_owner fd) : pimpl_(std::make_unique<connection::impl>(std::move(fd))) {}
-
-connection::~connection() = default;
+connection::connection(fd_owner fd) : fd_(std::move(fd)) {}
 
 const fd_owner& connection::file_descriptor() const noexcept {
-    return pimpl_->fd;
+    return fd_;
 }
 
 fd_owner& connection::file_descriptor() noexcept {
-    return pimpl_->fd;
+    return fd_;
 }
 
-std::istream& connection::in() noexcept {
-    return pimpl_->in_stream;
+ssize_t connection::recv(uint8_t *dest, std::size_t size) const {
+    ssize_t bytes_read = ::read(fd_, dest, size);
+    if (bytes_read == -1)
+        throw errno_except(errno);
+    return bytes_read;
 }
 
-std::ostream& connection::out() noexcept {
-    return pimpl_->out_stream;
+ssize_t connection::send(const uint8_t *src, std::size_t size) const {
+    ssize_t bytes_read = ::write(fd_, src, size);
+    if (bytes_read == -1)
+        throw errno_except(errno);
+    return bytes_read;
 }
 
 connection connect(type tp, const address& addr) {
@@ -76,10 +59,6 @@ connection connect(type tp, const address& addr) {
 
     return connection(std::move(con_fd));
 }
-
-// connection connect(const std::string& address) {
-
-// }
 
 } // namespace socket
 
