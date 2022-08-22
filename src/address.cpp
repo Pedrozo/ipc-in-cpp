@@ -4,24 +4,40 @@
 #include <stdexcept>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <unistd.h>
+
+#ifdef __ANDROID__
+#define OFFSET 1
+#else
+#define OFFSET 0
+#endif
 
 namespace ipc {
 
 namespace socket {
 
-address::address(const char *str) {
+const std::size_t address::MAX_LEN =
+    sizeof((struct sockaddr_un*)0)->sun_path / sizeof(char) - 1 - OFFSET;
+
+address::address(const char *str) : addr_() {
     std::size_t len = strnlen(str, MAX_LEN + 1);
 
-    if (len == MAX_LEN + 1)
+    if (len == MAX_LEN - OFFSET + 1)
         throw std::invalid_argument("Given address length is greater than the address limit");
 
-    strncpy(str_, str, MAX_LEN + 1);
+    std::memset(&addr_, 0, sizeof(struct sockaddr_un));
+    addr_.sun_family = AF_UNIX;
+    strncpy(addr_.sun_path + OFFSET, str, sizeof(addr_.sun_path) - 1 - OFFSET);
 }
 
 address::address(const std::string& str) : address(str.c_str()) {}
 
-const char *address::str() const noexcept {
-    return str_;
+const char *address::as_str() const noexcept {
+    return addr_.sun_path;
+}
+
+const struct sockaddr_un& address::as_unix() const noexcept {
+    return addr_;
 }
 
 } // namespace socket

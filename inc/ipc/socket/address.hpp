@@ -11,16 +11,18 @@ namespace socket {
 
 class address {
 public:
-    constexpr static std::size_t MAX_LEN = sizeof ((struct sockaddr_un*)0)->sun_path / sizeof(char) - 1;
+    static const std::size_t MAX_LEN;
 
     address(const char *str);
 
     address(const std::string& str);
 
-    const char *str() const noexcept;
+    const char *as_str() const noexcept;
+
+    const struct sockaddr_un& as_unix() const noexcept;
 
 private:
-    char str_[MAX_LEN + 1];
+    struct sockaddr_un addr_;
 };
 
 } // namespace socket

@@ -29,17 +29,12 @@ connection server::accept() const {
 }
 
 server make_server(type tp, const address& addr, int backlog) {
-    struct sockaddr_un sock_addr;
     fd_owner sock_fd(::socket(AF_UNIX, to_sock(tp), 0));
 
     if (int(sock_fd) == -1)
         throw errno_except(errno);
 
-    memset(&sock_addr, 0, sizeof(sock_addr));
-    sock_addr.sun_family = AF_UNIX;
-    strncpy(sock_addr.sun_path, addr.str(), sizeof(sock_addr.sun_path) - 1);
-
-    int ret = bind(int(sock_fd), (const struct sockaddr *) &sock_addr, sizeof(sock_addr));
+    int ret = bind(sock_fd, (const struct sockaddr *) &addr.as_unix(), sizeof(struct sockaddr_un));
     if (ret == -1)
         throw errno_except(errno);
 

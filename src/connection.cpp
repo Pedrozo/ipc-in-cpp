@@ -44,14 +44,8 @@ connection connect(type tp, const address& addr) {
     if (int(con_fd) == -1)
         throw errno_except(errno);
 
-    struct sockaddr_un socket_address;
-
-    memset(&socket_address, 0, sizeof(struct sockaddr_un));
-    socket_address.sun_family = AF_UNIX;
-    strncpy(socket_address.sun_path, addr.str(), sizeof(socket_address.sun_path) - 1);
-
     int ret = ::connect(int(con_fd),
-                        (const struct sockaddr *) &socket_address,
+                        (const struct sockaddr *) &addr.as_unix(),
                         sizeof(struct sockaddr_un));
 
     if (ret == -1)
