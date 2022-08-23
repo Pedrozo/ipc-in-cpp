@@ -40,6 +40,19 @@ const struct sockaddr_un& address::as_unix() const noexcept {
     return addr_;
 }
 
+void address::swap(address& other) noexcept {
+    using std::swap;
+
+    swap(addr_.sun_family, other.addr_.sun_family);
+
+    for (int i = 0; i < sizeof(addr_.sun_path); i++)
+        swap(addr_.sun_path[i], other.addr_.sun_path[i]);
+}
+
+void swap(address& a1, address& a2) noexcept {
+    a1.swap(a2);
+}
+
 } // namespace socket
 
 } // namespace ipc

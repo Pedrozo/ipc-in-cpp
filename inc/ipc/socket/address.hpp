@@ -17,6 +17,8 @@ public:
 
     address(const std::string& str);
 
+    void swap(address& other) noexcept;
+
     const char *as_str() const noexcept;
 
     const struct sockaddr_un& as_unix() const noexcept;
@@ -24,6 +26,8 @@ public:
 private:
     struct sockaddr_un addr_;
 };
+
+void swap(address& a1, address& a2) noexcept;
 
 } // namespace socket
 
