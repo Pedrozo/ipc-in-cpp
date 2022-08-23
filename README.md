@@ -37,7 +37,7 @@ void server_side() {
 
 And the client side that connects to that server could be:
 ```cpp
-#include "ipc/socket/server.hpp"
+#include "ipc/socket/connection.hpp"
 
 // exceptions are thrown in case of errors
 void client_side() {
