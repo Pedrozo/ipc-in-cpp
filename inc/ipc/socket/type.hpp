@@ -8,10 +8,7 @@ namespace socket {
 enum class type {
     STREAM,
     DGRAM,
-    SEQPACKET,
-    RAW,
-    RDM,
-    PACKET
+    SEQPACKET
 };
 
 int to_sock(type tp);
