@@ -25,6 +25,14 @@ private:
 
 server make_server(type tp, const address& addr, int backlog);
 
+inline server make_stream_server(const address& addr, int backlog) {
+    return make_server(type::STREAM, addr, backlog);
+}
+
+inline server make_seqpacket_server(const address& addr, int backlog) {
+    return make_server(type::SEQPACKET, addr, backlog);
+}
+
 } // namespace socket
 
 } // namespace ipc
