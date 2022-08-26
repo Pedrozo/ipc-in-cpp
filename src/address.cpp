@@ -6,31 +6,22 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-#ifdef __ANDROID__
-#define OFFSET 1
-#else
-#define OFFSET 0
-#endif
-
 namespace ipc {
 
 namespace socket {
 
-const std::size_t address::MAX_LEN =
-    sizeof((struct sockaddr_un*)0)->sun_path / sizeof(char) - 1 - OFFSET;
+const std::size_t address::MAX_LEN = sizeof((struct sockaddr_un*)0)->sun_path / sizeof(char) - 1;
 
-address::address(const char *str) : addr_() {
-    std::size_t len = strnlen(str, MAX_LEN + 1);
+static void set_sock_addr(struct sockaddr_un& addr, const char *str, int offset) {
+    std::size_t len = strnlen(str, address::MAX_LEN + 1);
 
-    if (len == MAX_LEN - OFFSET + 1)
+    if (len >= address::MAX_LEN + 1 - offset)
         throw std::invalid_argument("Given address length is greater than the address limit");
 
-    std::memset(&addr_, 0, sizeof(struct sockaddr_un));
-    addr_.sun_family = AF_UNIX;
-    strncpy(addr_.sun_path + OFFSET, str, sizeof(addr_.sun_path) - 1 - OFFSET);
+    std::memset(&addr, 0, sizeof(struct sockaddr_un));
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path + offset, str, sizeof(addr.sun_path) - 1 - offset);
 }
-
-address::address(const std::string& str) : address(str.c_str()) {}
 
 const char *address::as_str() const noexcept {
     return addr_.sun_path;
@@ -51,6 +42,18 @@ void address::swap(address& other) noexcept {
 
 void swap(address& a1, address& a2) noexcept {
     a1.swap(a2);
+}
+
+address make_path_address(const char *file_path) {
+    address addr;
+    set_sock_addr(addr.addr_, file_path, 0);
+    return addr;
+}
+
+address make_abstract_address(const char *name) {
+    address addr;
+    set_sock_addr(addr.addr_, name, 1);
+    return addr;
 }
 
 } // namespace socket

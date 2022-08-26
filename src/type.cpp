@@ -16,15 +16,6 @@ int to_sock(type tp) {
         case type::SEQPACKET:
             return SOCK_SEQPACKET;
 
-        case type::RAW:
-            return SOCK_RAW;
-
-        case type::RDM:
-            return SOCK_RDM;
-
-        case type::PACKET:
-            return SOCK_PACKET;
-
         default:
             return -1; // never supposed to reach here
     }
