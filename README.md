@@ -9,7 +9,7 @@ A connection is not mandatory for communicating using sockets. You can instead b
 #include <iostream>
 #include "ipc/socket/Endpoint.hpp"
 
-#define MAX_MSG_SIZE 30
+#define MAX_MSG_SIZE 1024
 #define SERVER_FILE "/tmp/my_sock_server"
 
 void ToUpperCase(char *str) {
