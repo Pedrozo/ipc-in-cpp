@@ -1,59 +1,203 @@
 # ipc-in-cpp
-Here you will find simple C++ wrappers for inter-process communication facilities. The goal is to make IPC more simple and readable, without adding (much) performance overhead. Thus important C++ features/patterns/practices were used, such as namespaces, exceptions, and RAII!
+Here you will find simple C++ wrappers for inter-process communication facilities. The goal is to make IPC more simple and readable, without adding (much) performance overhead. Thus important C++ features/patterns/practices were used, such as namespaces, exceptions, and of couse RAII!
+## Sockets (UNIX domain)
+UNIX domain sockets allow a bidirectional communication between processes. But before using them, you have 
+### Connection-less communication
+A connection is not mandatory for communicating using sockets. You can instead bind a socket to an address and use it send/receive data to/from another address. In UNIX systems, such approach is available for Datagram sockets, and here it's available in the `ipc::socket::Endpoint` class. Since examples are always helpful, following there's one with an "echo" server that returns the received message as upper case.
 
-**Note:** For those who wish to use this on Android (as do I), the abstract namespace used by Android is also covered when you cross-compile to it.
-
-## Examples
-### Sockets (UNIX domain)
-UNIX domain sockets allow a bidirectional communication between processes. Such feature is available in `ipc::socket::connection`, which has functions for sending and receiving data through a client-server connection. The `ipc::socket::server` represents the server, and its `accept()` function waits clients connections. In addition, clients must use the `ipc::socket::connect()` to connect to the server.
-For example, the server side could be something like this:
 ```cpp
-#include "ipc/socket/server.hpp"
+#include <iostream>
+#include "ipc/socket/Endpoint.hpp"
 
-// exceptions are thrown in case of errors
-void server_side() {
-    // the type of the connection you'll be using
-    constexpr ipc::socket::type SOCKET_TYPE = ipc::socket::type::STREAM;
+#define MAX_MSG_SIZE 30
+#define SERVER_FILE "/tmp/my_sock_server"
 
-    // the address that the clients will use for connecting
-    constexpr const char *SOCKET_ADDRESS = "/home/foo";
+void ToUpperCase(char *str) {
+    while (*str) {
+        *str = static_cast<char>(toupper(*str));
+        str++;
+    }
+}
 
-    // the grow limit for pending connections
-    constexpr int BACKLOG = 8;
+void RunEchoServer() {
+    // the address that the endpoint will bind to
+    // it will be a actual file in the file system because we're using MakePathAddress()
+    ipc::socket::Address addr = ipc::socket::MakePathAddress(SERVER_FILE);
 
-    // creates the server that might accept connections
-    ipc::socket::server my_server = ipc::socket::make_server(SOCKET_TYPE, SOCKET_ADDRESS, BACKLOG);
+    // creates a datagram socket bind to the /tmp/my_sock_server
+    ipc::socket::Endpoint endpoint = ipc::socket::MakeEndpoint(addr);
 
-    // blocks until a client connects
-    ipc::socket::connection con = my_server.accept();
+    char msg[MAX_MSG_SIZE + 1];
+    msg[MAX_MSG_SIZE] = '\0';
 
-    // and for sending data through the connection, just use its send function (analogous to write())
-    float some_data = 0.666f;
-    con.send((const uint_8 *) &some_data, sizeof(some_data));
+    // loop receiving strings and replying them to the sender as upper case
+    for (;;) {
+        ipc::socket::Address replyAddress;
+        ssize_t msgLen = endpoint.Recv(msg, MAX_MSG_SIZE, replyAddress);
 
-    // RAII will take care of properly closing the server and the connection
+        ToUpperCase(msg);
+
+        endpoint.Send(msg, msgLen, replyAddress);
+    }
+
+    // no need to close the socket or anything, RAII will take care of closing everything correctly
+}
+
+int main() {
+    remove(SERVER_FILE);
+
+    try {
+        RunEchoServer();
+    } catch (const ipc::SyscallError& err) {
+        // the SyscallError is a wrapper for system call erros (i.e. errno codes)
+        printf("[error] what: %s\n", err.what());
+    }
+
+    return 0;
 }
 ```
 
-And the client side that connects to that server could be:
+And below it's a possible client for that server.
+
 ```cpp
-#include "ipc/socket/connection.hpp"
+#include <iostream>
+#include "ipc/socket/Endpoint.hpp"
 
-// exceptions are thrown in case of errors
-void client_side() {
-    // the type of the connection you'll be using
-    constexpr ipc::socket::type SOCKET_TYPE = ipc::socket::type::STREAM;
+#define MAX_MSG_SIZE 1024
+#define SERVER_FILE "/tmp/my_sock_server"
+#define CLIENT_FILE "/tmp/my_sock_client"
 
-    // the address that the clients will use for connecting
-    constexpr const char *SOCKET_ADDRESS = "/home/foo";
+void RunClient() {
+    // the the address that this client endpoint binds to
+    ipc::socket::Address myAddress = ipc::socket::MakePathAddress(CLIENT_FILE);
 
-    // attempt to connect to the server
-    ipc::socket::connection con = ipc::socket::connect(SOCKET_TYPE, SOCKET_ADDRESS);
+    // the target address of our messages
+    ipc::socket::Address recipientAddress = ipc::socket::MakePathAddress(SERVER_FILE);
 
-    // receives data from the server
-    float some_data;
-    con.recv((uint_8 *) &some_data, sizeof(some_data));
+    // Creates a datagram socket bind to the client address
+    ipc::socket::Endpoint endpoint = ipc::socket::MakeEndpoint(myAddress);
 
-    // the connection will be closed per RAII
+    char msg[MAX_MSG_SIZE + 1];
+    msg[MAX_MSG_SIZE] = '\0';
+
+    // loop reading strings from the stdin, sending them to the server socket, and writing
+    // the server's response to the stdout
+    for (;;) {
+        printf("? ");
+        scanf(" %s", msg);
+
+        endpoint.Send(msg, strlen(msg) + 1, recipientAddress);
+        endpoint.Recv(msg, MAX_MSG_SIZE);
+
+        printf("> %s\n", msg);
+    }
+
+    // no need to close the socket or anything, RAII will take care of closing everything correctly
+}
+
+int main() {
+    // remove the client address file if it exists
+    remove(CLIENT_FILE);
+
+    try {   
+        RunClient();
+    } catch (const ipc::SyscallError& err) {
+        // the SyscallError is a wrapper for system call erros (i.e. errno codes)
+        printf("[error] what: %s\n", err.what());
+    }
+    
+
+    return 0;
+}
+```
+
+### Connection based communication
+If a connection is indeed required you can use the `ipc::socket::Server` and the `ipc::socket::Connection` classes. Two types of server/connection are available: `ipc::socket::Type::STREAM` and `ipc::socket::Type::PACKET`, analogous to `SOCK_STREAM` and `SOCK_SEQPACKET` from UNIX.
+In the following example the server writes all the characters it receives into a file.
+```cpp
+#include <iostream>
+#include <fstream>
+#include "ipc/socket/Server.hpp"
+
+constexpr std::size_t BUFFER_SIZE = 1024;
+#define SOCKET_FILE "/tmp/my_sock"
+
+void RunServer() {
+    // creates a stream server with at most 8 connections on its backlog
+    ipc::socket::Server server = ipc::socket::MakeServer(
+        ipc::socket::Type::STREAM,
+        ipc::socket::MakePathAddress(SOCKET_FILE),
+        8);
+
+    // awaits a client to connect
+    ipc::socket::Connection con = server.Accept();
+
+    char buffer[BUFFER_SIZE + 1];
+    std::ofstream output("some_file.txt"); // where the received text will be saved
+
+    // receives data from the connection until EOF
+    ssize_t bytesRecv;
+    while (bytesRecv = con.Recv(buffer, BUFFER_SIZE)) {
+        buffer[bytesRecv] = '\0';
+        output << buffer;
+    }
+}
+
+int main() {
+    remove(SOCKET_FILE);
+
+    try {
+        RunServer();
+    } catch (const ipc::SyscallError& err) {
+        // the SyscallError is a wrapper for system call erros (i.e. errno codes)
+        printf("[error] what: %s\n", err.what());
+    }
+
+    return 0;
+}
+```
+
+And the following client reads multiple lines from the `stdin` and forwards them to the server through the connection.
+```cpp
+#include <iostream>
+#include <algorithm>
+#include "ipc/socket/Connection.hpp"
+
+constexpr std::size_t BUFFER_SIZE = 1024;
+#define SOCKET_FILE "/tmp/my_sock"
+
+void RunClient() {
+    auto address = ipc::socket::MakePathAddress(SOCKET_FILE);
+
+    // connect to a stream server
+    auto con = ipc::socket::Connect(ipc::socket::Type::STREAM, address);
+
+    // read lines from the stdin until EOF
+    std::string line;
+    while (std::getline(std::cin, line)) {
+        const char *data = line.c_str();
+        std::size_t len = line.length();
+
+        // sends the line through the socket connection
+        while (len > 0) {
+            ssize_t bytesSent = con.Send(data, std::min(len, BUFFER_SIZE));
+            data += bytesSent;
+            len -= bytesSent;
+        }
+
+        char endline = '\n';
+        con.Send(&endline, sizeof(endline));
+    }
+}
+
+int main() {
+    try {   
+        RunClient();
+    } catch (const ipc::SyscallError& err) {
+        // the SyscallError is a wrapper for system call erros (i.e. errno codes)
+        printf("[error] what: %s\n", err.what());
+    }
+
+    return 0;
 }
 ```

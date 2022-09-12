@@ -5,8 +5,6 @@
 
 namespace ipc {
 
-namespace socket {
-
 template<typename func, typename... args>
 constexpr auto CallSys(const func& f, args&&... ar) {
     auto ret = f(std::forward<args>(ar)...);
@@ -14,8 +12,6 @@ constexpr auto CallSys(const func& f, args&&... ar) {
         throw SyscallError(errno);
     return ret;
 }
-
-} // namespace socket
 
 } // namespace ipc
 

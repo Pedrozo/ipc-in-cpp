@@ -6,8 +6,6 @@
 
 namespace ipc {
 
-namespace socket {
-
 class FileDescriptor {
 public:
 
@@ -38,8 +36,6 @@ public:
 private:
     int fd_;
 };
-
-} // namespace socket
 
 } // namespace ipc
 

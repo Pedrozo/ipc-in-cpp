@@ -6,8 +6,6 @@
 
 namespace ipc {
 
-namespace socket {
-
 class SyscallError : public std::exception {
 public:
 
@@ -24,8 +22,6 @@ public:
 private:
     int error_number_;
 };
-
-} // namespace socket
 
 } // namespace ipc
 
