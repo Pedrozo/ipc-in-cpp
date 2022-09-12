@@ -1,4 +1,4 @@
-# ipc-in-cpp
+# IPC in C++
 Here you will find simple C++ wrappers for inter-process communication facilities. The goal is to make IPC more simple and readable, without adding (much) performance overhead. Thus important C++ features/patterns/practices were used, such as namespaces, exceptions, and of couse RAII!
 ## Sockets (UNIX domain)
 UNIX domain sockets allow a bidirectional communication between processes. But before using them, you have to decide if you'll use connections on the communication.
